@@ -1,5 +1,27 @@
 # Raft
 
+## RPC Communication
+
+###### RequestVote
+
+A candidate initiates a RequestVote RPC call to ask other nodes for their vote during an election.
+A follower will grant a vote if (otherwise deny VoteGranted = false):
+
+- hasn't already voted for another node **in current term**.
+- the candidate's term is equal to or higher than the node's current term.
+
+```
+RequestVoteArgs:
+1. Term        int
+2. CandidateId int
+```
+
+```
+RequestVoteReply:
+1. VoteGranted  bool
+2. Term         int    # for the candidate to update itself
+```
+
 ## Q & A
 
 1. How is message considered as comitted?
@@ -19,3 +41,7 @@
 4. A mechnism for a candidate to become a follower after split votes, otherwise indefinite split votes?
 
 - Yes, if a candidate sees a higher term in a RequestVote or AppendEntries message from another server, it immediately steps down (from candidate or leader) to the follower state, recognizing the other server’s term as more up-to-date.
+
+5. Can a follower double vote for multiple candidates?
+
+- No, single vote per term. If another candidate requests a vote in the same term after the follower has already voted, the follower will reject the new RequestVote RPC.

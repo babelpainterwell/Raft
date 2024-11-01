@@ -16,13 +16,14 @@ const (
 )
 
 type Raft struct {
-	mu sync.Mutex
-	id int
-	term int 
-	state State 
-	votes int 
-	electionTimer *time.Timer
-	heartbeatInterval time.Duration
+	mu 						sync.Mutex
+	id 						int
+	currentTerm 			int 
+	state 					State 
+	votedFor 				int 			// the candidate who receives the vote, -1 for nil
+	log 					[]LogEntry
+	electionTimer 			*time.Timer
+	heartbeatInterval 		time.Duration
 }
 
 func GenerateRandom(lowerBound int64, upperBound int64) int64 {
@@ -43,9 +44,8 @@ func NewRaft(id int) *Raft {
 
 	return &Raft{
 		id: id,
-		term: 0, 
+		currentTerm: 0, 
 		state: Follower,
-		votes: 0,
 		electionTimer: time.NewTimer(electionTimeout),
 		heartbeatInterval: 50 * time.Millisecond,
 	}
@@ -61,19 +61,12 @@ func (node *Raft) ResetElectionTimer() {
 }
 
 // Methods for state transtions (ONLY), excluding operations such as reset timer 
-// without any RPC communication. eg. new candidate sends RequestVote, new leader sends empty AppendEntry RPC (heartbeat)
 func (node *Raft) FollowerToCandidate(){
 	node.state = Candidate
 
-	// increase its term 
-	node.term += 1
-
-	// candidate votes for itself first 
-	node.votes = 1
-
-	// restart the election timeout and it waits the timeout to eplase before starting a new election
-	node.ResetElectionTimer()
-
+	// increase its term for a new election
+	node.currentTerm += 1
+	
 	fmt.Printf("Server %d becomes a candidate\n", node.id)
 }
 
@@ -82,11 +75,8 @@ func (node *Raft) CandidateToLeader(){
 	fmt.Printf("Server %d becomes a leader\n", node.id)
 }
 
-// once it receives majority votes, it becomes the leader and starts sending heartbeats
 func (node *Raft) LeaderToFollower(){
 	node.state = Follower
-	// reset the votes
-	node.votes = 0 
 
 	fmt.Printf("Server %d becomes a follower\n", node.id)
 }
@@ -94,6 +84,14 @@ func (node *Raft) LeaderToFollower(){
 func (node *Raft) CandidateToFollower() {
 	node.state = Follower
 
+	// reset votedFor 
+	node.votedFor = -1
+
 	fmt.Printf("Server %d becomes a follower\n", node.id)
 }
+
+
+//
+// RPC HANDLERS
+//
 
