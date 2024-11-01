@@ -60,6 +60,19 @@ func (node *Raft) ResetElectionTimer() {
 	fmt.Printf("Server %d: Reset election timer to %v\n", node.id, electionTimeout)
 }
 
+// If a follower receives no communication over a period of time, 
+// it starts a new election and become the candidate 
+func (r *Raft) StartNewElection() {
+	// update the term 
+
+	// state transition 
+
+	// initiate RequestVote RPC
+
+	// state transition after RPC, becomes a leader or follower
+
+}
+
 // Methods for state transtions (ONLY), excluding operations such as reset timer 
 func (node *Raft) FollowerToCandidate(){
 	node.state = Candidate
@@ -94,4 +107,34 @@ func (node *Raft) CandidateToFollower() {
 //
 // RPC HANDLERS
 //
+func (r *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
+	// deny the request if either args term is lower than current term 
+	// or r has voted for another candidate in the same term
+	if r.votedFor != -1 || args.Term < r.currentTerm {
+		reply.Term = r.currentTerm
+		reply.VotedGranted = false 
+		return nil 
+	}
+
+	// Reset VotedFor if a new term arrives 
+	if args.Term > r.currentTerm {
+		r.currentTerm = args.Term
+		r.votedFor = -1 
+	}
+
+	if r.votedFor == -1 {
+		reply.Term = r.currentTerm
+		reply.VotedGranted = true 
+		// set votedFor
+		r.votedFor = args.CandidateId
+	} else {
+		reply.Term = r.currentTerm
+		reply.VotedGranted = false 
+	}
+
+	return nil
+
+}
