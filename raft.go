@@ -138,3 +138,7 @@ func (r *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) error
 	return nil
 
 }
+
+func (r *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply) error {
+	
+}
