@@ -1,5 +1,9 @@
 # Raft
 
+As part of my scalable system project, the links to my MapReduce implementation and key-value servers are provided below:
+MR: https://github.com/babelpainterwell/MapReduceWell
+KV: https://github.com/babelpainterwell/distributed-key-value
+
 ## RPC Communication
 
 ###### RequestVote
