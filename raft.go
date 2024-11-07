@@ -23,7 +23,7 @@ type Raft struct {
 	votedFor 				int 			// the candidate who receives the vote, -1 for nil
 	log 					[]LogEntry
 	electionTimer 			*time.Timer
-	heartbeatInterval 		time.Duration
+	heartbeatInterval 		int 
 }
 
 func GenerateRandom(lowerBound int64, upperBound int64) int64 {
@@ -103,6 +103,35 @@ func (node *Raft) CandidateToFollower() {
 	fmt.Printf("Server %d becomes a follower\n", node.id)
 }
 
+//
+// HeartBeat 
+//
+func (r *Raft) sendHeartbeats() {
+	// send empty AppendEntries to followers periotically based on the heartbeat interval 
+
+	for {
+		time.Sleep(time.Duration(r.heartbeatInterval * int(time.Millisecond)))
+
+		appendEntriesArgs := AppendEntriesArgs{
+			Term: 			r.currentTerm,
+			LeaderId: 		r.id,
+			Entries: 		[]LogEntry{}, // empty slice for a heatbeat
+		}
+
+		appendEntriesReply := AppendEntriesReply{}
+
+
+		r.AppendEntries(&appendEntriesArgs, &appendEntriesReply)
+
+		// downgrade a leader if the received term is higher than the leader's current term 
+		if appendEntriesReply.Success != true {
+			r.LeaderToFollower()
+			break
+		}
+
+	}
+}
+
 
 //
 // RPC HANDLERS
@@ -140,5 +169,24 @@ func (r *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) error
 }
 
 func (r *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply) error {
-	
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if args.Term < r.currentTerm {
+		reply.Term = r.currentTerm // tell the leader the follower has a higher term 
+		reply.Success = false 
+		return nil 
+	}
+
+	// Get the entries 
+	// entries := args.Entries
+	reply.Term = r.currentTerm
+	reply.Success = true 
+
+	// remember to reset the timer for the follower 
+	r.ResetElectionTimer()
+
+
+	return nil 
+
 }

@@ -12,9 +12,12 @@ type RequestVoteReply struct {
 }
 
 type AppendEntriesArgs struct {
-
+	Term 			int 
+	LeaderId 		int  // for client redirection use as the client might contact any server in the cluster
+	Entries 		[]LogEntry
 }
 
 type AppendEntriesReply struct {
-	
+	Term 			int  // for the candidate to update itself 
+	Success 		bool
 }
